@@ -1,0 +1,149 @@
+OLD ROCKET CLASS JUST RIGHT BEFORE ENTITY DEPENDANCE
+
+package Entity;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.util.Random;
+
+import Functions.Calculations;
+import Functions.doubleVec2D;
+import Functions.intVec2D;
+import Main.GamePanel;
+
+public class Rocket extends GameObject {
+	//	FIELDS	//
+	private static boolean DEBUG = false;
+	private intVec2D currentPos;	//	shots curent position values stored in 2D vector
+	private intVec2D targetPos;		//	shots target position values stored in 2D vector (where user clicked)
+	private doubleVec2D idealAngles;
+	private static double GRAVITY = 9.8;
+	private int r;					//	shot radius
+	private double speed;			//	speed
+	private double angle;			//	degree angle
+	private double liveTime;		//	time how long shot exsists
+	private  int initialX;	//	value of initial x coordinate
+	private  int initialY;	//	value of initial y coordinate
+	private Color color = Color.YELLOW;			//	color
+	Random rnd = new Random();		//	random number generator
+	
+	private void LOG(String s){
+		if(DEBUG){
+		System.out.println(s);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param x position of target x
+	 * @param y	position of target y
+	 * @param explodetParticle	boolean determinating if it is master shot (firework) or particle after explosion
+	 */
+	public Rocket (int x, int y, boolean explodetParticle ){
+		currentPos = new intVec2D(0,0);
+		if(!explodetParticle){
+			createMasterShot(x,y);
+			
+		}else if(explodetParticle){
+			//createExplodetParticle(x,y);
+		}
+		
+	}
+	
+	private void createExplodetParticle(int x, int y) {
+		r = 1;
+		speed = randomSpeed();
+		currentPos.setValues(x, y);
+		initialX = currentPos.getX();
+		initialY = currentPos.getY();		
+		liveTime = 0.033;
+		angle = Math.toRadians(rnd.nextInt(360));
+		
+	}
+
+	private void createMasterShot(int x, int y){
+		r = 2;
+		speed = randomSpeed();
+		targetPos = new intVec2D(x, y);
+		currentPos.setValues(rnd.nextInt(GamePanel.WIDTH), GamePanel.HEIGHT - 10);
+		initialX = currentPos.getX();
+		initialY = currentPos.getY();
+		idealAngles = Calculations.getAngleToHit(speed,GRAVITY, targetPos, currentPos);
+		
+		if (idealAngles !=null){
+			//		finding smaller shot angle to shot directly		//
+			if	(	idealAngles.getX() <= idealAngles.getY()	){
+				angle = idealAngles.getX();
+			}else{
+				angle = idealAngles.getY();
+			}	
+			liveTime = 0.033;
+		}else {
+			LOG("requared angle calculation error, no angle to hit");
+			LOG("using input angle for shot");
+			//		default angle calculation here		//
+			//		shot just idles for 1 second at (0,0) and gets deleted		//
+		}	
+		LOG("calculated radian angles for debug case is: " + idealAngles.getX() + " | " + idealAngles.getY());
+		LOG("calculated degree angles for debug case is: " + Math.toDegrees(idealAngles.getX()) + " | " + Math.toDegrees(idealAngles.getY()));
+		LOG("_______________________________________________________________________________	");
+	}
+	
+	//		generates random number  from 100 150 for speed randomization		//
+	private double randomSpeed() {
+		int minSpeed = 100;
+		return (minSpeed + rnd.nextInt(50));
+		
+	}
+
+	//		Return functions		//
+	public int getTargetX(){ return targetPos.getX();}
+	public int getTargetY(){ return targetPos.getY();}
+	public int getCurentX(){ return currentPos.getX();}
+	public int getCurentY(){ return currentPos.getY();}
+	public int getInitialX(){	return initialX; }
+	public int getInitialY(){	return initialY; }
+	public double getSpeed(){ return speed; }
+	public int getr(){ return r;}
+	public double getAngle(boolean degree) {
+		if( degree){
+			return Math.toDegrees(angle);
+		}
+		return angle; 
+	}
+	
+	public boolean update(){
+		//		calculates in which X direction shot must be fired		//
+		if((targetPos.getX() - initialX) > 0){
+			currentPos.setX( (int) (initialX + (speed*liveTime*Math.cos(angle))));
+		}else if((targetPos.getX() - initialX) < 0)
+		{
+			currentPos.setX( (int) (initialX - (speed*liveTime*Math.cos(angle))));
+		}
+		
+		currentPos.setY(  (int) (GamePanel.HEIGHT -(speed*liveTime*Math.sin(angle)-GRAVITY*liveTime*liveTime/2)));
+		liveTime += 0.033;
+		
+		//		check if shot is still actual		//
+		//		if on screen		//
+		if(currentPos.getX() < -r*4 || currentPos.getX() > GamePanel.WIDTH + r*4 || 
+				currentPos.getY() < -r*4 || currentPos.getY() > GamePanel.HEIGHT +r*4){
+			return true;
+		}
+		//		if has calculated angle to hit target (is moving)	//
+		if ( liveTime > 1 && currentPos.getX() ==  currentPos.getY() && currentPos.getX() == 0){
+			return true;
+		}
+		return false;
+	}
+	
+	public void draw (Graphics2D g){
+		g.setColor(color);
+		g.fillOval((int)(currentPos.getX() - r), (int) (currentPos.getY() - r), 2 * r, 2 * r);
+		
+		//		drawing target		//
+		g.fillOval((int)(targetPos.getX()), (int) (targetPos.getY()), 4 * r, 4 * r);
+	}
+
+	
+	
+}
